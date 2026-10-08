@@ -279,6 +279,20 @@ void InitTimers();
         }
 #endif
 
+#if CLANG_VERSION_MAJOR <= 16
+      // cling never calls HandleTranslationUnit and has no multiplexer, so
+      // plan here, as the > 16 path above does. Variable declarations are
+      // included so that `auto df = clad::differentiate(...)` works at top
+      // level.
+      if (!m_Multiplexer && !getScheduler().isTraversalInFlight()) {
+        for (Decl* D : DGR) {
+          if (isa<FunctionDecl>(D) || isa<VarDecl>(D)) {
+            getScheduler().Plan(DGR);
+            break;
+          }
+        }
+      }
+#endif
       // We could not delay the processing of derivatives, act as if each
       // call is final. That would still have vgvassilev/clad#248 unresolved.
       // Not on re-entry (see above): the outer traversal finalizes.
